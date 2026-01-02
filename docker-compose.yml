@@ -6,7 +6,7 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: fitness
+      MYSQL_DATABASE: fitness_datanaly
     ports:
       - "3220:3306"
     volumes:

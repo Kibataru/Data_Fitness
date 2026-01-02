@@ -8,7 +8,7 @@ db = mysql.connector.connect(
     port=3306,
     user="root",
     password="root",
-    database="fitness"
+    database="fitness_datanaly"
 )
 cursor = db.cursor()
 
@@ -18,7 +18,7 @@ current_activity = None
 activity_seconds_left = 0
 
 #Данные за прошлые два дня + текущ
-virtual_time = datetime.now() - timedelta(days=2)
+virtual_time = datetime.now() #- timedelta(days=2)
 
 def activity(hour):
     if 0 <= hour < 6:
@@ -89,15 +89,15 @@ def generate(user_id):
         current_activity
     )
 
-for _ in range(2 * 24 * 60 * 60):
-    data = generate(1)
-    cursor.execute("""
-        INSERT INTO fitness_data
-        (user_id, ts, steps, heart_rate, calories, activity_type)
-        VALUES (%s, %s, %s, %s, %s, %s)
-    """, data)
+#for _ in range(2 * 24 * 60 * 60):
+#    data = generate(1)
+#    cursor.execute("""
+#        INSERT INTO fitness_data
+#        (user_id, ts, steps, heart_rate, calories, activity_type)
+#        VALUES (%s, %s, %s, %s, %s, %s)
+#    """, data)
 
-db.commit()
+#db.commit()
 
 next_tick = time.time()
 
