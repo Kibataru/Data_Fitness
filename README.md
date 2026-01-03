@@ -22,37 +22,37 @@ Fitness Data Analytics System
 
 
 #Технологический стек
-Docker & Docker Compose**: Оркестрация контейнеров.
-Python: Скрипт-генератор данных.
-MySQL Основное хранилище фитнес-данных.
-Redash: Аналитика и визуализация.
-PostgreSQL: Хранение метаданных и настроек Redash.
-Redis: Брокер сообщений для работы Redash.
+        Docker & Docker Compose**: Оркестрация контейнеров.
+        Python: Скрипт-генератор данных.
+        MySQL Основное хранилище фитнес-данных.
+        Redash: Аналитика и визуализация.
+        PostgreSQL: Хранение метаданных и настроек Redash.
+        Redis: Брокер сообщений для работы Redash.
 
 
 #Структура базы данных
-    Таблица fitness_data:
-    Поле	Тип	Описание
-    id	INT (PK)	Уникальный идентификатор записи
-    user_id	INT	ID пользователя (всегда 1)
-    ts	DATETIME	Временная метка события
-    steps	INT	Количество шагов за интервал
-    heart_rate	INT	Текущий пульс
-    calories	FLOAT	Сожженные калории
-    activity_type	VARCHAR	Тип активности (sleep, walk, run, etc.)
+        Таблица fitness_data:
+        Поле	Тип	Описание
+        id	INT (PK)	Уникальный идентификатор записи
+        user_id	INT	ID пользователя (всегда 1)
+        ts	DATETIME	Временная метка события
+        steps	INT	Количество шагов за интервал
+        heart_rate	INT	Текущий пульс
+        calories	FLOAT	Сожженные калории
+        activity_type	VARCHAR	Тип активности (sleep, walk, run, etc.)
 
 
 #SQL для создания таблицы:
-    CREATE TABLE IF NOT EXISTS fitness_data (
-      id int NOT NULL AUTO_INCREMENT,
-      user_id int DEFAULT NULL,
-      ts datetime DEFAULT NULL,
-      steps int DEFAULT NULL,
-      heart_rate int DEFAULT NULL,
-      calories float DEFAULT NULL,
-      activity_type varchar(50) DEFAULT NULL,
-      PRIMARY KEY (id)
-    );
+            CREATE TABLE IF NOT EXISTS fitness_data (
+              id int NOT NULL AUTO_INCREMENT,
+              user_id int DEFAULT NULL,
+              ts datetime DEFAULT NULL,
+              steps int DEFAULT NULL,
+              heart_rate int DEFAULT NULL,
+              calories float DEFAULT NULL,
+              activity_type varchar(50) DEFAULT NULL,
+              PRIMARY KEY (id)
+            );
 
 
 ##Запуск
