@@ -10,7 +10,7 @@ services:
     ports:
       - "3220:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - mysql_data_v2:/var/lib/mysql
 
   generator:
     build: .
@@ -19,5 +19,49 @@ services:
       - mysql
     restart: always
 
+  postgres:
+    image: postgres:13
+    container_name: redash_postg
+    restart: always
+    environment:
+      POSTGRES_DB: redash
+      POSTGRES_USER: redash
+      POSTGRES_PASSWORD: redash
+    volumes:
+      - postgres_data_v2:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: redash_red
+    restart: always
+
+  redash_server:
+    image: redash/redash:latest
+    container_name: redash_serv
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "5000:5000"
+    environment:
+      REDASH_DATABASE_URL: postgresql://redash:redash@postgres:5432/redash
+      REDASH_REDIS_URL: redis://redis:6379/0
+      REDASH_COOKIE_SECRET: "fitness-project-2025-secret-98a1f"
+    command: server
+    restart: always
+
+  redash_worker:
+    image: redash/redash:latest
+    container_name: redash_work
+    depends_on:
+      - redash_server
+    environment:
+      REDASH_DATABASE_URL: postgresql://redash:redash@postgres:5432/redash
+      REDASH_REDIS_URL: redis://redis:6379/0
+      REDASH_COOKIE_SECRET: "fitness-project-2025-secret-98a1f"
+    command: worker
+    restart: always
+
 volumes:
-  mysql_data:
+  mysql_data_v2:
+  postgres_data_v2:

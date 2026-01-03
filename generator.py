@@ -3,22 +3,19 @@ import random
 import time
 from datetime import datetime, timedelta
 
-db = mysql.connector.connect(
-    host="mysql",
-    port=3306,
-    user="root",
-    password="root",
-    database="fitness_datanaly"
-)
-cursor = db.cursor()
+DB_CONFIG = {
+    "host": "mysql",
+    "port": 3306,
+    "user": "root",
+    "password": "root",
+}
+DB_NAME = "fitness_datanaly"
 
-#Состояние в покое
 current_hr = 65
 current_activity = None
 activity_seconds_left = 0
+virtual_time = datetime.now()
 
-#Данные за прошлые два дня + текущ
-virtual_time = datetime.now() #- timedelta(days=2)
 
 def activity(hour):
     if 0 <= hour < 6:
@@ -32,19 +29,18 @@ def activity(hour):
     else:
         return "rest"
 
-#Пульс
+
 def smooth_hr(target):
     global current_hr
     current_hr += int((target - current_hr) * 0.2)
     return current_hr
-def generate(user_id):
-    global virtual_time, current_activity, activity_seconds_left
 
-    virtual_time += timedelta(seconds=1)
+
+def generate_step(timestamp, user_id=1):
+    global current_activity, activity_seconds_left, current_hr
 
     if activity_seconds_left <= 0:
-        current_activity = activity(virtual_time.hour)
-
+        current_activity = activity(timestamp.hour)
         activity_seconds_left = {
             "sleep": random.randint(300, 900),
             "rest": random.randint(60, 300),
@@ -56,62 +52,107 @@ def generate(user_id):
     activity_seconds_left -= 1
 
     if current_activity == "sleep":
-        steps = 0
-        hr = smooth_hr(random.randint(50, 60))
-        calories = 0.2
-
+        steps = 0;
+        hr_target = random.randint(50, 60);
+        cal = 0.2
     elif current_activity == "rest":
-        steps = random.randint(0, 3)
-        hr = smooth_hr(random.randint(60, 75))
-        calories = 0.5
-
+        steps = random.randint(0, 3);
+        hr_target = random.randint(60, 75);
+        cal = 0.5
     elif current_activity == "walk":
-        steps = random.randint(1, 2)
-        hr = smooth_hr(random.randint(85, 105))
-        calories = steps * 0.04
-
+        steps = random.randint(1, 2);
+        hr_target = random.randint(85, 105);
+        cal = steps * 0.04
     elif current_activity == "run":
-        steps = random.randint(3, 5)
-        hr = smooth_hr(random.randint(130, 160))
-        calories = steps * 0.09
-
+        steps = random.randint(3, 5);
+        hr_target = random.randint(130, 160);
+        cal = steps * 0.09
     else:
-        steps = random.randint(0, 5)
-        hr = smooth_hr(random.randint(110, 140))
-        calories = random.uniform(0.1, 0.2)
+        steps = random.randint(0, 5);
+        hr_target = random.randint(110, 140);
+        cal = random.uniform(0.1, 0.2)
 
-    return (
-        user_id,
-        virtual_time,
-        steps,
-        hr,
-        round(calories, 2),
-        current_activity
-    )
+    #smooth_hr обновляет глобальную переменную current_hr
+    real_hr = smooth_hr(hr_target)
 
-#for _ in range(2 * 24 * 60 * 60):
-#    data = generate(1)
-#    cursor.execute("""
-#        INSERT INTO fitness_data
-#        (user_id, ts, steps, heart_rate, calories, activity_type)
-#        VALUES (%s, %s, %s, %s, %s, %s)
-#    """, data)
+    return (user_id, timestamp, steps, real_hr, round(cal, 2), current_activity)
 
-#db.commit()
+def init_db():
+    conn = mysql.connector.connect(**DB_CONFIG)
+    cursor = conn.cursor()
 
-next_tick = time.time()
-
-while True:
-    next_tick += 1
-    data = generate(1)
+    cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_NAME}")
+    cursor.execute(f"USE {DB_NAME}")
 
     cursor.execute("""
-        INSERT INTO fitness_data
-        (user_id, ts, steps, heart_rate, calories, activity_type)
-        VALUES (%s, %s, %s, %s, %s, %s)
-    """, data)
+        CREATE TABLE IF NOT EXISTS fitness_data (
+          id int NOT NULL AUTO_INCREMENT,
+          user_id int DEFAULT NULL,
+          ts datetime DEFAULT NULL,
+          steps int DEFAULT NULL,
+          heart_rate int DEFAULT NULL,
+          calories float DEFAULT NULL,
+          activity_type varchar(50) DEFAULT NULL,
+          PRIMARY KEY (id)
+        )
+    """)
+    conn.commit()
+    return conn
+
+
+def backfill_history(cursor):
+
+    end_time = datetime.now()
+    start_time = end_time - timedelta(days=2)
+    sim_time = start_time
+
+    batch_data = []
+    total_seconds = int((end_time - start_time).total_seconds())
+
+    for _ in range(total_seconds):
+        sim_time += timedelta(seconds=1)
+        record = generate_step(sim_time)
+        batch_data.append(record)
+
+        if len(batch_data) >= 5000:
+            cursor.executemany("""
+                INSERT INTO fitness_data
+                (user_id, ts, steps, heart_rate, calories, activity_type)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, batch_data)
+            batch_data = []
+
+    if batch_data:
+        cursor.executemany("""
+            INSERT INTO fitness_data (user_id, ts, steps, heart_rate, calories, activity_type)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, batch_data)
+
+if __name__ == "__main__":
+
+    db = init_db()
+    cursor = db.cursor()
+
+    backfill_history(cursor)
     db.commit()
 
-    sleep_time = next_tick - time.time()
-    if sleep_time > 0:
-        time.sleep(sleep_time)
+    next_tick = time.time()
+
+    virtual_time = datetime.now()
+
+    while True:
+        next_tick += 1
+
+        virtual_time += timedelta(seconds=1)
+
+        data = generate_step(virtual_time)
+
+        cursor.execute("""
+            INSERT INTO fitness_data
+            (user_id, ts, steps, heart_rate, calories, activity_type)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, data)
+        db.commit()
+        sleep_time = next_tick - time.time()
+        if sleep_time > 0:
+            time.sleep(sleep_time)
