@@ -57,3 +57,10 @@ Fitness Data Analytics System
 
 ##Запуск
    docker-compose up -d
+   docker cp ./postgres-init/redash_backup.sql redash_postg:/tmp/backup.sql
+   docker exec -it redash_postg psql -U redash -d redash -f /tmp/backup.sql
+   docker-compose restart redash_server redash_worker
+   http://localhost:5000/
+   ЛОГИН: akk123@gmail.com Пароль: 1234567890
+   
+   
